@@ -7,10 +7,31 @@ export class App extends React.Component {
     this.state={
       items: [],
       isLoading: false,
+      enableAutoRefresh: false,
+      minComments: 0,
     }
   }
 
   componentDidMount() {
+    this.getItems();
+  }
+
+  updateAutoRefresh = () => {
+    this.setState(
+      state => ({
+        enableAutoRefresh: !state.enableAutoRefresh
+      }),
+      ()=>{
+        if ( !this.state.enableAutoRefresh ) {
+          clearInterval(this.autoRefresh);
+        } else {
+          this.autoRefresh = setInterval(this.getItems, 4000);
+        }
+      }
+    );
+  } 
+
+  getItems = () => {
     this.setState({ isLoading: true });
 
     fetch('https://www.reddit.com/r/reactjs.json?limit=100')
@@ -18,33 +39,51 @@ export class App extends React.Component {
     .then( ({data}) => {
       this.setState({ 
         items: data.children,
-        isLoading: false
+        isLoading: false,
        });
     } );
   }
 
-  updateAutoRefresh = () => {
-
-  } 
+  updateMinComments= (e) => {
+    this.setState({
+      minComments: e.target.value,
+    })
+  }
 
   render() {
 
-    const {items, isLoading} = this.state;
+    const {items, isLoading, enableAutoRefresh, minComments} = this.state;
     const itemsSortByComments = items.sort( 
       (a,b) => b.data.num_comments - a.data.num_comments
     );
     return (
       <div>
         <h1>Top Commented</h1>
-        <button 
-          type="button"
-          onClick={this.updateAutoRefresh}
-          style={{
+        <div>
+
+          <button 
+            type="button"
+            onClick={this.updateAutoRefresh}
+            style={{
+              marginBottom: '15px'
+            }}
+          >
+            { enableAutoRefresh ? 'Stop' : 'Start' } AutoRefresh
+          </button>
+        </div>
+        <input 
+          type="range" 
+          value={minComments}
+          onChange={this.updateMinComments}
+          min={0} 
+          max={500} 
+          steps={5} 
+          style={{ 
+            width: '100%',
             marginBottom: '15px'
           }}
-        >
-          Start AutoRefresh
-        </button>
+         />
+
         { isLoading ? <p>...Loading</p> : (
           itemsSortByComments.map(
             item => <Item key={item.data.id} data={item.data} /> 
